@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+
+    <link rel="stylesheet" href="../resources/js/theme-chalk/index.css">
+    <script src="../resources/js/vue.js"></script>
+    <script src="../resources/js/index.js"></script>
+    <script src="../resources/js/axios.js"></script>
+
+
+</head>
+<body>
+<div id="app">
+    <el-row type="flex" justify="space-between">
+        <el-col :span="5">
+            <el-button type="primary" icon="el-icon-plus" @click="flag=!flag" size="small">添加</el-button>
+            <el-button type="danger" icon="el-icon-delete" @click="batchesDel" size="small">批量删除</el-button>
+        </el-col>
+        <el-col :span="10">
+            <el-input placeholder="请输入要搜索的关键词" v-model="searchName">
+                <el-select slot="prepend" v-model="searchType">
+                    <el-option label="按照主键搜索" value="1"></el-option>
+                    <el-option label="按照姓名搜索" value="2"></el-option>
+                    <el-option label="按照手机搜索" value="3"></el-option>
+                </el-select>
+                <el-button type="success" icon="el-icon-search" slot="append"  @click="search">搜索</el-button>
+            </el-input>
+        </el-col>
+    </el-row>
+
+    <!-- 分割 -->
+    <div STYLE="margin: 20px"></div>
+
+    <!--数据表格展示-->
+    <el-table :data="userList" border @select-all="selectAll" @select="selectOne">
+        <el-table-column type="selection" align="center"></el-table-column>
+        <el-table-column type="index" align="center" label="序号" width="80px"></el-table-column>
+        <el-table-column label="主键" prop="id" align="center"></el-table-column>
+        <el-table-column label="姓名" prop="uname" align="center"></el-table-column>
+        <el-table-column label="性别" prop="sex" align="center" :formatter="sexFmt"></el-table-column>
+        <el-table-column label="手机号" prop="tel" align="center"></el-table-column>
+        <el-table-column label="住址" prop="address" align="center" ></el-table-column>
+        <el-table-column label="职业" prop="profession" align="center"></el-table-column>
+        <el-table-column label="薪资" prop="sal" align="center" :formatter="salFmt"></el-table-column>
+        <el-table-column label="操作"  align="center" width="200">
+            <template slot-scope="scope">
+                <el-button type="danger" icon="el-icon-delete" size="small" @click="oneDel(scope.row)">删除</el-button>
+                <el-button type="warning" icon="el-icon-edit" size="small" @click="openEditUserWin(scope.row)">编辑</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+
+    <!--分页显示-->
+    <el-pagination
+            :total="total"
+            :current-page="pageNum"
+            :page-size="pageSize"
+            :page-sizes="pageSizes"
+            layout="total,sizes, prev, pager, next, jumper"
+            background
+            @size-change="sizeChange"
+            @current-change="pageNumChange"
+    >
+    </el-pagination>
+
+    <!--添加弹窗对话框-->
+    <el-dialog :visible.sync="flag" title="添加用户" @close="addUserWinClose">
+        <!--表单-->
+        <el-form ref="addFrm"  :rules="ruleReg" :model="addUserFormData">
+            <el-form-item label="姓名" label-width="80px" prop="uname">
+                <el-input placeholder="请输入姓名" prefix-icon="el-icon-user" v-model="addUserFormData.uname"></el-input>
+            </el-form-item>
+
+            <el-form-item label="性别" label-width="80px" prop="sex">
+                <el-radio-group v-model="addUserFormData.sex">
+                    <el-radio :label="1">男</el-radio>
+                    <el-radio :label="0">女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="手机号" label-width="80px" prop="tel">
+                <el-input placeholder="请输入手机号码" prefix-icon="el-icon-mobile-phone" v-model="addUserFormData.tel"></el-input>
+            </el-form-item>
+
+            <el-form-item label="住址" label-width="80px" prop="address">
+                <el-input placeholder="请输入地址" prefix-icon="el-icon-house" v-model="addUserFormData.address"></el-input>
+            </el-form-item>
+
+            <el-form-item label="职业" label-width="80px" prop="profession">
+                <el-select v-model="addUserFormData.profession">
+                    <el-option-group>
+                        <el-option label="程序猿" value="程序猿"></el-option>
+                        <el-option label="攻城狮" value="攻城狮"></el-option>
+                        <el-option label="码龙" value="码龙"></el-option>
+                    </el-option-group>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="薪资" label-width="80px" prop="sal">
+                <el-input placeholder="请输入薪资" prefix-icon="el-icon-sal" v-model="addUserFormData.sal">
+                    <template slot="prepend">
+                        ￥
+                    </template>
+                </el-input>
+            </el-form-item>
+
+            <el-form-item label-width="80px">
+                <el-button type="primary" icon="el-icon-check" @click="addUserOK">确定</el-button>
+                <el-button type="danger" icon="el-icon-close" @click="addUserCancel">重置</el-button>
+            </el-form-item>
+
+        </el-form>
+    </el-dialog>
+
+    <!--修改弹窗对话框-->
+    <el-dialog :visible.sync="flag2" title="编辑用户">
+        <!--表单-->
+        <el-form ref="editFrm"  :rules="ruleReg" :model="editUserFormData">
+            <el-form-item label="姓名" label-width="80px" prop="uname">
+                <el-input placeholder="请输入姓名" prefix-icon="el-icon-user" v-model="editUserFormData.uname"></el-input>
+            </el-form-item>
+
+            <el-form-item label="性别" label-width="80px" prop="sex">
+                <el-radio-group v-model="editUserFormData.sex">
+                    <el-radio :label="1">男</el-radio>
+                    <el-radio :label="0">女</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="手机号" label-width="80px" prop="tel">
+                <el-input placeholder="请输入手机号码" prefix-icon="el-icon-mobile-phone" v-model="editUserFormData.tel"></el-input>
+            </el-form-item>
+
+            <el-form-item label="住址" label-width="80px" prop="address">
+                <el-input placeholder="请输入地址" prefix-icon="el-icon-house" v-model="editUserFormData.address"></el-input>
+            </el-form-item>
+
+            <el-form-item label="职业" label-width="80px" prop="profession">
+                <el-select v-model="editUserFormData.profession">
+                    <el-option-group>
+                        <el-option label="程序猿" value="程序猿"></el-option>
+                        <el-option label="攻城狮" value="攻城狮"></el-option>
+                        <el-option label="码龙" value="码龙"></el-option>
+                    </el-option-group>
+                </el-select>
+            </el-form-item>
+
+            <el-form-item label="薪资" label-width="80px" prop="sal">
+                <el-input placeholder="请输入薪资" prefix-icon="el-icon-sal" v-model="editUserFormData.sal">
+                    <template slot="prepend">
+                        ￥
+                    </template>
+                </el-input>
+            </el-form-item>
+
+            <el-form-item label-width="80px">
+                <el-button type="primary" icon="el-icon-check" @click="editUserOK">确定</el-button>
+                <el-button type="danger" icon="el-icon-close" @click="editUserCancel">重置</el-button>
+            </el-form-item>
+
+        </el-form>
+    </el-dialog>
+</div>
+<script>
+    let v = new Vue({
+        el: "#app",
+        data: {
+            /*搜索关键字*/
+            searchName:undefined,
+            searchType:undefined,
+            /*存放表格数据列表*/
+            userList:[
+            ],
+
+            /*分页属性*/
+            /*总记录数*/
+            total:1,
+            /*当前页码*/
+            pageNum:1,
+            /*每页显示的记录条数*/
+            pageSize:2,
+            /*每页显示的记录条数选择*/
+            pageSizes:[2,4,8,10],
+
+            flag:false,
+            flag2:false,
+
+            ruleReg:{
+                uname:[
+                    {required:true,message:"用户名不能为空!",trigger:"blur"},
+                    {pattern:/^[\u4e00-\u9fa5]{2,10}$/,message: "用户名不满足业务要求",trigger:"blur"}
+                ]
+
+            },
+            /*添加弹窗表单*/
+            addUserFormData:{
+                uname:undefined,
+                sex:1,
+                tel:undefined,
+                address:undefined,
+                profession:"攻城狮",
+                sal:undefined
+            },
+            /*修改弹窗表单*/
+            editUserFormData:{
+                id:undefined,
+                uname:undefined,
+                sex:1,
+                tel:undefined,
+                address:undefined,
+                profession:"攻城狮",
+                sal:undefined
+            },
+            /*保存要删除的id*/
+            delIdArr:[]
+        },
+        methods: {
+            sexFmt(row){
+                return  row.sex===1?"男":"女"
+            },
+            salFmt(row) {
+                return "￥"+Number(row.sal).toFixed(2);
+            },
+            /*添加对话框确认*/
+            addUserOK(){
+                this.$refs.addFrm.validate(valid=> {
+                    if (valid) {
+                        //产生id
+                        axios.get('/addUserServlet.do?uname=' + this.addUserFormData.uname + '&sex=' + this.addUserFormData.sex +
+                            '&tel=' + this.addUserFormData.tel + '&profession=' + this.addUserFormData.profession + '&sal=' + this.addUserFormData.sal
+                            + '&address=' + this.addUserFormData.address).then(d => {
+                            this.$notify({
+                                title: "温馨提示",
+                                message: "添加成功",
+                                type: "success"
+                            })
+                            this.userList=[]
+                            this.addUser()
+                        }).catch(e => {
+                            this.$alert("请检查数据！")
+                        })
+
+                        this.total = this.total + 1;
+                        //关闭弹窗
+                        this.flag = false
+                    }
+                })
+            },
+            /*添加对话框重置*/
+            addUserCancel(){
+                this.$refs.addFrm.resetFields();
+            },
+            /*关闭添加对话框*/
+            addUserWinClose(){
+                this.$refs.addFrm.resetFields();
+            },
+            /*全选数据*/
+            selectAll(row){
+                let newIdArr=row.map(item=>{
+                    return item.id
+                })
+                this.delIdArr=newIdArr;
+            },
+            /*选择一条或多条数据*/
+            selectOne(row){
+                let newIdArr=row.map(item=>{
+                    return item.id
+                })
+                this.delIdArr=newIdArr;
+            },
+            /*批量删除*/
+            batchesDel(){
+                let arr=this.delIdArr
+                var id="";
+                this.delIdArr.map(i => {
+                    id+="id="+i+"&"
+                })
+                id=id.substring(0,id.length-1)
+                if (arr.length>=1) {
+                    this.$confirm("确认删除该记录？", "提示").then(() => {
+                        axios.get('/cutBatchUserServlet?'+id).then(d=>{
+                            console.log(d)
+                            this.$notify({
+                                title: "提示",
+                                message: "删除成功",
+                                type: "success"
+                            })
+                            this.userList=[]
+                            this.addUser()
+                        }).catch(e=>{
+                            alert(e)
+                        })
+
+
+                    })
+                }else {
+                    this.$alert("请至少选择一条数据","提示")
+                }
+            },
+            /*删除单条*/
+            oneDel(row){
+                console.log(row)
+                this.$confirm("确认删除？","提示",{
+                    type:"warning"
+                }).then(()=>{
+                    axios.get('/cutUserServlet.do?id='+row.id).then(d=>{
+                        console.log(d)
+                        this.$notify({
+                            title: "提示",
+                            message: "删除成功",
+                            type: "success"
+                        })
+                        this.userList=[]
+                        this.addUser()
+                    }).catch(e=>{
+                        alert(e)
+                    })
+
+
+                })
+            },
+            /*打开修改框*/
+            openEditUserWin(row){
+                this.flag2=!this.flag2;
+                //拷贝一份新数据
+                this.editUserFormData=Object.assign({},row);
+                this.editUserFormData.sex=Number(row.sex)
+            },
+            /*修改数据确认*/
+            editUserOK(){
+                //1.拿到修改数据
+                this.$refs.editFrm.validate(valid=>{
+                    //判断数据合法
+                    if (valid){
+                        //数据合法改变数据
+                        console.log(this.editUserFormData);
+                        axios.get('/editUserServlet.do?uname=' + this.editUserFormData.uname + '&sex=' + this.editUserFormData.sex +
+                            '&tel=' + this.editUserFormData.tel + '&profession=' + this.editUserFormData.profession + '&sal=' + this.editUserFormData.sal
+                            + '&address=' + this.editUserFormData.address+'&id='+this.editUserFormData.id).then(d => {
+                                console.log(d+"dd")
+                            this.$notify({
+                                title: "温馨提示",
+                                message: "修改成功",
+                                type: "success"
+                            })
+                            this.userList=[]
+                            this.addUser()
+                        }).catch(e => {
+                            this.$alert("请检查数据！")
+                        })
+                        //关闭弹窗
+                        this.flag2=false;
+                    }else {
+                        this.$alert("数据不合法请检查","提示")
+                    }
+                })
+            },
+            /*修改按钮重置*/
+            editUserCancel(){
+                this.$refs.editFrm.resetFields();
+            },
+            /*查询*/
+            search(){
+
+                //判断查询内容是否为空
+                if (this.searchName!=undefined&&this.searchName!="") {
+                    var num = this.searchName
+
+                    if (this.searchType==1){
+                    axios.get('/getUSerByIdServlet.do?id='+num).then(d => {
+                        this.userList=[]
+                        this.userList.push(d.data.data)
+                        this.$notify({
+                            title: "提示",
+                            message: "查询完成",
+                            type: "success"
+                        })
+                        this.total=d.data.data.length
+                    }).catch(e => {
+                        alert(e)
+                    })
+
+
+                    }else if (this.searchType==2){
+                        console.log(num)
+                        axios.get('/getUSerByNameServlet.do?name='+num).then(d => {
+                            console.log(d.data.data)
+                            this.userList=[]
+                            for (let i = 0; i < d.data.data.length; i++) {
+                                this.userList.push(d.data.data[i])
+                                this.userList[i].sex=Number(d.data.data[i].sex)
+                            }
+                            this.total=d.data.data.length
+
+                            this.$notify({
+                                title: "提示",
+                                message: "查询完成",
+                                type: "success"
+                            })
+                        }).catch(e => {
+                            alert(e)
+                        })
+                    }else if (this.searchType==3){
+                        axios.get('/getUserByTelServlet.do?tel='+num).then(d => {
+                            this.userList=[]
+                            this.userList.push(d.data.data)
+                            this.$notify({
+                                title: "提示",
+                                message: "查询完成",
+                                type: "success"
+                            })
+                            this.total=d.data.data.length
+                        }).catch(e => {
+                            alert(e)
+                        })
+                    }
+                    else {
+                        this.$alert("未选择类型","提示")
+                    }
+                }else {
+                    this.$alert("请填写查询内容","提示")
+                }
+            },
+            /*pageSize 改变*/
+            sizeChange(size){
+                this.pageSize=size
+                this.userList=[]
+                axios.get('/getUserByPageServlet.do?pageNum='+this.pageNum+'&pageSize='+this.pageSize).then(d=>{
+                    for (let i = 0; i < d.data.data.length; i++) {
+                        this.userList.push(d.data.data[i])
+                        this.userList[i].sex=Number(d.data.data[i].sex)
+                    }
+                    this.total=d.data.total
+                }).catch(e=>{
+                    alert(e)
+                })
+            },
+            /*页码改变时会触发*/
+            pageNumChange(num){
+
+                this.pageNum=num;
+                this.userList=[]
+                axios.get('/getUserByPageServlet.do?pageNum='+ this.pageNum+'&pageSize='+this.pageSize).then(d=>{
+                    for (let i = 0; i < d.data.data.length; i++) {
+                        this.userList.push(d.data.data[i])
+                        this.userList[i].sex=Number(d.data.data[i].sex)
+                    }
+                    this.total=d.data.total
+                }).catch(e=>{
+                    alert(e)
+                })
+            },
+            // 初始化数据数据
+            addUser(){
+                axios.get('/getUserByPageServlet.do?pageNum='+this.pageNum+'&pageSize='+this.pageSize).then(d=>{
+                    console.log(d.data.data)
+                    for (let i = 0; i < d.data.data.length; i++) {
+                        this.userList.push(d.data.data[i])
+                        this.userList[i].sex=Number(d.data.data[i].sex)
+                    }
+                    this.total=d.data.total
+                }).catch(e=>{
+                    alert(e)
+                })
+            }
+        },
+        mounted(){
+            this.addUser()
+        }
+    })
+</script>
+</body>
+</html>
