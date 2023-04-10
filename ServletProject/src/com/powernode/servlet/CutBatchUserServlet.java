@@ -11,14 +11,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.function.DoublePredicate;
 
 /**
  * @Author 翁康
- * @Date 2023-04-06 19:37
+ * @Date 2023-04-06 20:40
  * @Description
  */
-@WebServlet("/editUserServlet.do")
-public class EditUserServlet extends HttpServlet {
+@WebServlet("/cutBatchUserServlet")
+public class CutBatchUserServlet extends HttpServlet {
     private UserService userService=new UserServiceImpl();
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -26,15 +27,12 @@ public class EditUserServlet extends HttpServlet {
         resp.setCharacterEncoding("utf-8");
         resp.setContentType("text/html;charset=utf-8");
 
-        String uname=req.getParameter("uname");
-        String sex=req.getParameter("sex");
-        String tel=req.getParameter("tel");
-        String profession=req.getParameter("profession");
-        String sal=req.getParameter("sal");
-        String address=req.getParameter("address");
-        String id=req.getParameter("id");
-        Result rs =userService.modifyUser(uname,sex,tel,profession,sal,address,id);
+//        String id=req.getParameter("id");
+//        String[] id={"9","10","11","12"};
+        String[] id=req.getParameterValues("id");
+        Result rs= userService.removeBatchUser(id);
         resp.getWriter().println(JSON.toJSONString(rs));
+
     }
 
     @Override
